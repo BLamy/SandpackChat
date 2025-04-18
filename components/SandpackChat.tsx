@@ -433,7 +433,7 @@ export function SandpackChat() {
             <p>{error}</p>
           </div>
         )}
-        <App repo={repo} setRepo={setRepo} apiKey={anthropicApiKey} setApiKey={() => {}} onRequestApiKey={() => logout()}/>
+        <App repo={repo} setRepo={setRepo} />
       </SandpackProvider>
   );
 }
