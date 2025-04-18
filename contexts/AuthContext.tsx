@@ -58,7 +58,13 @@ interface AuthProviderProps {
  */
 export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [encryptionKey, setEncryptionKey] = useState<CryptoKey | null>(null);
-  const [userIdentifier, setUserIdentifier] = useState<string | null>();
+  const [userIdentifier, setUserIdentifier] = useState<string | null>(() => {
+    // Initialize from localStorage only on client side
+    if (typeof window !== 'undefined' && window.localStorage) {
+      return localStorage.getItem('userIdentifier');
+    }
+    return null;
+  });
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [anthropicApiKey, setAnthropicApiKey] = useState<string | null>(null);
@@ -132,7 +138,11 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         }
       }
 
-      localStorage.setItem('userIdentifier', identifier);
+      // Check if localStorage is available (client-side only)
+      if (typeof window !== 'undefined' && window.localStorage) {
+        localStorage.setItem('userIdentifier', identifier);
+      }
+      
       setError(null);
       console.log('[Auth] Login successful. Identifier:', identifier, ' Anthropic Key Loaded:', !!apiKey);
 
@@ -151,7 +161,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       setIsLoading(false); // Ensure loading is set to false
       console.log("[Auth] Login process finished.");
     }
-    // Removed dependency on getSecretFromStorage as it's called internally
   }, []);
 
   // const register = useCallback(async (email: string) => {
@@ -197,7 +206,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     setUserIdentifier(null);
     setAnthropicApiKey(null);
     setGithubApiKey(null);
-    localStorage.removeItem('userIdentifier');
+    
+    // Check if localStorage is available (client-side only)
+    if (typeof window !== 'undefined' && window.localStorage) {
+      localStorage.removeItem('userIdentifier');
+    }
+    
     setError(null);
     setIsLoading(false); // Ensure loading is false
     console.log("[Auth] User logged out.");
@@ -278,7 +292,7 @@ export const useAuth = (): AuthContextType => {
 
 
 export async function startRegistration(email: string) {
-  if (!window.PublicKeyCredential) {
+  if (typeof window === 'undefined' || !window.PublicKeyCredential) {
     throw new WebAuthnError('WebAuthn is not supported in this browser');
   }
 
@@ -334,7 +348,7 @@ export async function startRegistration(email: string) {
 }
 
 export async function startAuthentication() {
-  if (!window.PublicKeyCredential) {
+  if (typeof window === 'undefined' || !window.PublicKeyCredential) {
     throw new WebAuthnError('WebAuthn is not supported in this browser');
   }
 

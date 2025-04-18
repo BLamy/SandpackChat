@@ -342,7 +342,7 @@ export default function App({ repo, setRepo }: AppProps) {
     
     try {
       // Clean any excluded files from change tracking
-      if (window.changedFilePaths) {
+      if (typeof window !== 'undefined' && window.changedFilePaths) {
         excludedFiles.forEach(file => {
           window.changedFilePaths?.delete(file);
         });

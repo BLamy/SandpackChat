@@ -13,6 +13,11 @@ export const saveSecretToStorage = async (
   value: string,
   encryptionKey: CryptoKey
 ): Promise<void> => {
+  if (typeof window === 'undefined' || !window.localStorage) {
+    console.warn('[SecureStorage] localStorage not available, cannot save secret');
+    return;
+  }
+  
   try {
     // Encrypt the API key
     const encryptedValue = await encryptData(encryptionKey, value);
@@ -33,6 +38,11 @@ export const getSecretFromStorage = async (
   type: SecretType,
   encryptionKey: CryptoKey
 ): Promise<string | null> => {
+  if (typeof window === 'undefined' || !window.localStorage) {
+    console.warn('[SecureStorage] localStorage not available, cannot retrieve secret');
+    return null;
+  }
+  
   try {
     // Get the encrypted value from local storage
     const encryptedValue = localStorage.getItem(`secure_${type}`);
@@ -57,6 +67,9 @@ export const getSecretFromStorage = async (
  * Checks if a secret of the given type exists in storage
  */
 export const hasSecretInStorage = (type: SecretType): boolean => {
+  if (typeof window === 'undefined' || !window.localStorage) {
+    return false;
+  }
   return localStorage.getItem(`secure_${type}`) !== null;
 };
 
@@ -64,6 +77,9 @@ export const hasSecretInStorage = (type: SecretType): boolean => {
  * Removes a secret from storage
  */
 export const removeSecretFromStorage = (type: SecretType): void => {
+  if (typeof window === 'undefined' || !window.localStorage) {
+    return;
+  }
   localStorage.removeItem(`secure_${type}`);
   console.log(`[SecureStorage] Removed ${type} from storage`);
 }; 

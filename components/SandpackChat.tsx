@@ -9,6 +9,7 @@ import * as LightningFS from '@isomorphic-git/lightning-fs';
 import * as git from 'isomorphic-git';
 import http from 'isomorphic-git/http/web';
 import { useAuth } from "@/contexts/AuthContext";
+import { AuthProvider } from "@/contexts/AuthContext";
 
 // Default initial files when no repo is specified
 const initialFiles = {
@@ -212,7 +213,6 @@ export function SandpackChat() {
   const [gitInstance, setGitInstance] = useState<any>(null);
   // Track the current repo to detect changes
   const [currentRepoId, setCurrentRepoId] = useState<string | null>(null);
-  const { anthropicApiKey, githubApiKey, logout } = useAuth();
 
   // Initialize the filesystem
   useEffect(() => {
@@ -436,4 +436,11 @@ export function SandpackChat() {
   );
 }
 
-export default SandpackChat;
+// Wrap the exported component with AuthProvider
+export default function SandpackChatWithAuth() {
+  return (
+    <AuthProvider>
+      <SandpackChat />
+    </AuthProvider>
+  );
+}
