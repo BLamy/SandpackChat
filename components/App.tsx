@@ -21,10 +21,12 @@ import {
   GitBranchIcon, 
   GitCommitIcon,
   Loader2Icon,
-  KeyIcon
+  KeyIcon,
+  LogOutIcon
 } from "lucide-react";
 import type { Message } from "@/hooks/useSandpackAgent";
 import { useGit } from "@/hooks/useGit";
+import { useAuth } from "@/contexts/AuthContext";
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -119,7 +121,7 @@ declare global {
     sandpackFiles?: Record<string, any>;
     markFileAsChanged?: (filePath: string) => void;
     debugSandpack?: () => void;
-    anthropicApiKey?: string;
+    gitFs?: any; // Keep gitFs if it's still used globally
   }
 }
 
@@ -280,9 +282,8 @@ export default function App({ repo, setRepo }: AppProps) {
   const [branchName, setBranchName] = useState("");
   const [prLink, setPrLink] = useState("");
   const [diffOutput, setDiffOutput] = useState("");
-  const [apiKey, setApiKey] = useState<string>("");
-  const [isApiKeyDialogOpen, setIsApiKeyDialogOpen] = useState(false);
   const { sandpack } = useSandpack();
+  const { logout, isAuthenticated, anthropicApiKey, githubApiKey } = useAuth();
   const { 
     isLoading, 
     error: gitError, 
@@ -298,24 +299,6 @@ export default function App({ repo, setRepo }: AppProps) {
   // List of files to exclude from diffs and change tracking
   const excludedFiles = ["/App.js", "/index.js", "/.codesandbox/workspace.json"];
   
-  // Check for API key in localStorage on mount
-  useEffect(() => {
-    const storedApiKey = localStorage.getItem("anthropic-api-key");
-    if (storedApiKey) {
-      setApiKey(storedApiKey);
-      // Also set it on window for global access
-      window.anthropicApiKey = storedApiKey;
-    } else {
-      setIsApiKeyDialogOpen(true);
-    }
-  }, []);
-  
-  // Update window.anthropicApiKey when apiKey changes
-  useEffect(() => {
-    if (apiKey) {
-      window.anthropicApiKey = apiKey;
-    }
-  }, [apiKey]);
   
   // Add debug capability to window
   useEffect(() => {
@@ -560,14 +543,18 @@ export default function App({ repo, setRepo }: AppProps) {
             Connect
           </button>
           
-          <button
-            type="button"
-            onClick={() => setIsApiKeyDialogOpen(true)}
-            className="px-3 py-1 bg-secondary text-secondary-foreground rounded-md text-sm font-medium flex items-center gap-1"
-          >
-            <KeyIcon className="h-3 w-3" />
-            <span>API Key</span>
-          </button>
+          
+          {isAuthenticated && (
+            <button
+              type="button"
+              onClick={() => logout()}
+              className="px-3 py-1 bg-primary/10 hover:bg-primary/20 text-primary rounded-md text-sm font-medium flex items-center gap-1 transition-colors"
+              title="Log out and clear your API key access"
+            >
+              <LogOutIcon className="h-3 w-3" />
+              <span>Logout</span>
+            </button>
+          )}
           
           {repo && (
             <button 
@@ -602,14 +589,7 @@ export default function App({ repo, setRepo }: AppProps) {
           {gitError}
         </div>
       )}
-      
-      {/* API Key Dialog */}
-      <ApiKeyDialog
-        isOpen={isApiKeyDialogOpen}
-        onOpenChange={setIsApiKeyDialogOpen}
-        apiKey={apiKey}
-        setApiKey={setApiKey}
-      />
+    
       
       {/* Commit Dialog */}
       <AlertDialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -728,8 +708,8 @@ export default function App({ repo, setRepo }: AppProps) {
                   <SandpackAgent
                     messages={chatMessages}
                     setMessages={setChatMessages}
-                    apiKey={apiKey}
-                    onRequestApiKey={() => setIsApiKeyDialogOpen(true)}
+                    apiKey={anthropicApiKey || ""}
+                    onRequestApiKey={() => logout()}
                   />
                 </TabsContent>
                 <TabsContent

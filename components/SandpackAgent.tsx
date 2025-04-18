@@ -51,9 +51,10 @@ export function SandpackAgent({ messages, setMessages, apiKey, onRequestApiKey }
       systemPrompt: string,
       tools: any[]
     ) => {
-      if (!apiKey) {
+      if (!apiKey || apiKey === "") {
+        console.log("Anthropic API key is required");
         onRequestApiKey();
-        throw new Error("API key is required");
+        throw new Error("Anthropic API key is required. Please enter your API key to continue.");
       }
 
       const response = await fetch("https://api.anthropic.com/v1/messages", {
@@ -118,7 +119,8 @@ export function SandpackAgent({ messages, setMessages, apiKey, onRequestApiKey }
 
   const handleSendMessage = async () => {
     if (!input.trim()) return;
-    if (!apiKey) {
+    if (!apiKey || apiKey === "") {
+      console.log("Anthropic API key is required");
       onRequestApiKey();
       return;
     }

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import * as git from 'isomorphic-git';
 import http from 'isomorphic-git/http/web';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface UseGitOptions {
   repoPath?: string;
@@ -24,7 +25,7 @@ interface CommitMessageResult {
 export function useGit({ repoPath = '/repo' }: UseGitOptions = {}) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
+  const { anthropicApiKey } = useAuth();
   const getFileSystem = () => {
     // @ts-ignore
     const fs = window.gitFs;
@@ -318,14 +319,6 @@ export function useGit({ repoPath = '/repo' }: UseGitOptions = {}) {
       setIsLoading(true);
       setError(null);
       
-      // Use the shared API key from window instead of managing our own
-      const apiKey = window.anthropicApiKey;
-      
-      // If no API key is set, prompt to set it
-      if (!apiKey) {
-        throw new Error("API key is required to generate commit messages");
-      }
-      
       const systemPrompt = `You are a helpful assistant that analyzes git diffs and writes good commit messages.
       Given a git diff output, create a short, clear, and informative commit message and description.
       Follow conventional commit format for the title (e.g., feat:, fix:, docs:, style:, refactor:, perf:, test:, build:, ci:, chore:).
@@ -336,7 +329,7 @@ export function useGit({ repoPath = '/repo' }: UseGitOptions = {}) {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-api-key": apiKey,
+          "x-api-key": anthropicApiKey || "",
           "anthropic-version": "2023-06-01",
           "anthropic-dangerous-direct-browser-access": "true",
         },
