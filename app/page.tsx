@@ -202,7 +202,7 @@ function isBinaryPath(path: string): boolean {
 }
 
 export default function Main() {
-  const [repo] = useQueryState("repo");
+  const [repo, setRepo] = useQueryState("repo");
   const [files, setFiles] = useState<Record<string, string>>(initialFiles);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -425,7 +425,7 @@ export default function Main() {
           <p>{error}</p>
         </div>
       )}
-      <App />
+      <App repo={repo} setRepo={setRepo} />
     </SandpackProvider>
   );
 }

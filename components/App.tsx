@@ -13,11 +13,15 @@ import {
   ResizableHandle,
 } from "@/components/ui/resizable";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { EyeIcon, MessageCircleIcon } from "lucide-react";
+import { EyeIcon, MessageCircleIcon, GitBranchIcon } from "lucide-react";
 import type { Message } from "@/hooks/useSandpackAgent";
 
-export default function App() {
-  // Store chat messages in state to persist across tab changes
+interface AppProps {
+  repo: string | null;
+  setRepo: (value: string | null) => Promise<URLSearchParams>;
+}
+
+export default function App({ repo, setRepo }: AppProps) {
   const [chatMessages, setChatMessages] = useState<Message[]>([
     {
       id: "1",
@@ -26,9 +30,47 @@ export default function App() {
       timestamp: new Date(),
     },
   ]);
+  
+  const [repoInput, setRepoInput] = useState(repo || "");
+  
+  const handleRepoChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (repoInput) {
+      await setRepo(repoInput);
+    }
+  };
 
   return (
     <div className="h-screen w-full flex flex-col bg-background text-foreground">
+      {/* Repo Toolbar */}
+      <div className="border-b p-2 flex items-center">
+        <div className="flex items-center gap-2 font-medium text-sm mr-4">
+          <GitBranchIcon className="h-4 w-4" />
+          <span>Repository:</span>
+        </div>
+        <form onSubmit={handleRepoChange} className="flex-1 flex gap-2">
+          <input
+            type="text"
+            value={repoInput}
+            onChange={(e) => setRepoInput(e.target.value)}
+            placeholder="owner/repo"
+            className="flex-1 px-2 py-1 text-sm border rounded-md bg-background"
+          />
+          <button 
+            type="submit" 
+            className="px-3 py-1 bg-primary text-primary-foreground rounded-md text-sm font-medium"
+          >
+            Connect
+          </button>
+        </form>
+        {repo && (
+          <div className="ml-4 text-sm text-muted-foreground">
+            Connected: <span className="font-medium text-foreground">{repo}</span>
+          </div>
+        )}
+      </div>
+      
+      {/* Main Content Area */}
       <div className="flex-1 flex overflow-hidden">
         <ResizablePanelGroup direction="horizontal" className="flex-1">
           <ResizablePanel defaultSize={60} minSize={30}>
