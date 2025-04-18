@@ -28,11 +28,13 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20' # Specify your Node.js version
-          cache: 'npm'
+          cache: 'pnpm' # Use pnpm cache
+      - name: Install pnpm
+        run: corepack enable
       - name: Install dependencies
-        run: npm install
+        run: pnpm install # Use pnpm install
       - name: Build
-        run: npm run build # Assuming your build script is 'build' and outputs to 'out'
+        run: pnpm run build # Use pnpm build
       - name: Setup Pages
         uses: actions/configure-pages@v4
       - name: Upload artifact
