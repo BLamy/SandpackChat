@@ -36,32 +36,6 @@ jobs:
           cache: 'pnpm' # Use pnpm cache
       - name: Install dependencies
         run: pnpm install # Use pnpm install
-      - name: Configure Next.js for static export
-        run: |
-          if [ -f "next.config.js" ]; then
-            # Check if output:'export' is already in the file
-            if ! grep -q "output.*'export'" next.config.js; then
-              # Back up the original file
-              cp next.config.js next.config.js.bak
-              # Update the configuration
-              echo "Updating next.config.js for static export"
-              sed -i "/module.exports/a \ \ output: 'export'," next.config.js
-            fi
-          else
-            # Create a new next.config.js file
-            echo "Creating new next.config.js with static export configuration"
-            echo "/** @type {import('next').NextConfig} */
-            const nextConfig = {
-              output: 'export',
-              // Disable image optimization for static exports
-              images: {
-                unoptimized: true,
-              },
-            };
-            
-            module.exports = nextConfig;" > next.config.js
-          fi
-          cat next.config.js
       - name: Build
         run: pnpm run build
       - name: Check output directory
