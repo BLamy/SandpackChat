@@ -32,10 +32,16 @@ export interface SandpackAgentProps {
   setMessages: React.Dispatch<React.SetStateAction<Message[]>>;
   apiKey: string;
   onRequestApiKey: () => void;
+  testResults?: any;
 }
 
-export function SandpackAgent({ messages, setMessages, apiKey, onRequestApiKey }: SandpackAgentProps) {
-
+export function SandpackAgent({ 
+  messages, 
+  setMessages, 
+  apiKey, 
+  onRequestApiKey,
+  testResults 
+}: SandpackAgentProps) {
   const [input, setInput] = useState("");
   const [collapsedTools, setCollapsedTools] = useState<Record<string, boolean>>(
     {}
@@ -92,6 +98,7 @@ export function SandpackAgent({ messages, setMessages, apiKey, onRequestApiKey }
     sendMessage,
     clearMessages: clearAgentMessages,
     isLoading,
+    updateTestResults,
   } = useSandpackAgent({
     callLLM: callLLM,
     systemPrompt: DEFAULT_SYSTEM_PROMPT,
@@ -116,6 +123,13 @@ export function SandpackAgent({ messages, setMessages, apiKey, onRequestApiKey }
       inputRef.current.focus();
     }
   }, []);
+
+  // Update test results when they change from props
+  useEffect(() => {
+    if (testResults && updateTestResults) {
+      updateTestResults(testResults);
+    }
+  }, [testResults, updateTestResults]);
 
   const handleSendMessage = async () => {
     if (!input.trim()) return;

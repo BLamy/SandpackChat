@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   SandpackCodeEditor,
   SandpackFileExplorer,
@@ -223,6 +223,9 @@ export default function App({ repo, setRepo }: AppProps) {
     createBranch,
     synchronizeFiles
   } = useGit();
+  
+  // State for test results instead of ref
+  const [testResults, setTestResults] = useState<any>(null);
   
   // List of files to exclude from diffs and change tracking
   const excludedFiles = ["/App.js", "/index.js", "/.codesandbox/workspace.json"];
@@ -638,17 +641,16 @@ export default function App({ repo, setRepo }: AppProps) {
                     setMessages={setChatMessages}
                     apiKey={anthropicApiKey || ""}
                     onRequestApiKey={() => logout()}
+                    testResults={testResults}
                   />
                 </TabsContent>
                 <TabsContent
                   value="preview"
                   className="h-full p-0 m-0 data-[state=active]:flex"
                 >
-                  <SandpackTests  verbose onComplete={(results) => {
+                  <SandpackTests verbose onComplete={(results) => {
                     console.log("Tests completed:", results);
-                    if (agent && agent.updateTestResults) {
-                      agent.updateTestResults(results);
-                    }
+                    setTestResults(results);
                   }} />
                 </TabsContent>
               </div>

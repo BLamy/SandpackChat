@@ -34,7 +34,7 @@ export interface ToolResult {
   files?: string[];
   path?: string;
   query?: string;
-  results?: any[];
+  results?: any;
   command?: string;
   output?: string;
   searchTerm?: string;
