@@ -4,7 +4,7 @@ import { useState } from "react";
 import {
   SandpackCodeEditor,
   SandpackFileExplorer,
-  SandpackPreview,
+  SandpackTests
 } from "@codesandbox/sandpack-react";
 import { SandpackAgent } from "@/components/SandpackAgent";
 import {
@@ -84,14 +84,7 @@ export default function App() {
                   value="preview"
                   className="h-full p-0 m-0 data-[state=active]:flex"
                 >
-                  <SandpackPreview
-                    showNavigator
-                    showRefreshButton
-                    showRestartButton
-                    showSandpackErrorOverlay
-                    showOpenInCodeSandbox={false}
-                    style={{ height: "100%", width: "100%" }}
-                  />
+                  <SandpackTests />
                 </TabsContent>
               </div>
             </Tabs>
