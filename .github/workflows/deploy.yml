@@ -24,26 +24,54 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v2
-        with:
-          version: 8 # Use pnpm version 8.x
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20' # Specify your Node.js version
           cache: 'pnpm' # Use pnpm cache
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8 # Use pnpm version 8.x
       - name: Install dependencies
         run: pnpm install # Use pnpm install
+      - name: Configure Next.js for static export
+        run: |
+          if [ -f "next.config.js" ]; then
+            # Check if output:'export' is already in the file
+            if ! grep -q "output.*'export'" next.config.js; then
+              # Back up the original file
+              cp next.config.js next.config.js.bak
+              # Update the configuration
+              echo "Updating next.config.js for static export"
+              sed -i "/module.exports/a \ \ output: 'export'," next.config.js
+            fi
+          else
+            # Create a new next.config.js file
+            echo "Creating new next.config.js with static export configuration"
+            echo "/** @type {import('next').NextConfig} */
+            const nextConfig = {
+              output: 'export',
+              // Disable image optimization for static exports
+              images: {
+                unoptimized: true,
+              },
+            };
+            
+            module.exports = nextConfig;" > next.config.js
+          fi
+          cat next.config.js
       - name: Build
-        run: pnpm run build # Use pnpm build
+        run: pnpm run build
+      - name: Check output directory
+        run: ls -la
       - name: Setup Pages
         uses: actions/configure-pages@v4
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
           # Upload the output directory from the build step
-          path: './out' # Adjust if your build output is in a different directory
+          path: './out' # Next.js static export directory with output: 'export'
 
   deploy:
     environment:
