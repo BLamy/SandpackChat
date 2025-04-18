@@ -716,7 +716,9 @@ export default function App({ repo, setRepo }: AppProps) {
                   value="preview"
                   className="h-full p-0 m-0 data-[state=active]:flex"
                 >
-                  <SandpackTests />
+                  <SandpackTests  verbose onComplete={(...args) => {
+                    console.log("Tests completed:", args);
+                  }} />
                 </TabsContent>
               </div>
             </Tabs>
