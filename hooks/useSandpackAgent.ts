@@ -1,5 +1,16 @@
 import { useState, useRef, useEffect } from "react";
 import { useSandpack } from "@codesandbox/sandpack-react";
+import { SandpackClient, SandboxSetup } from "@codesandbox/sandpack-client";
+
+// Add the window interface declaration to make TypeScript happy
+declare global {
+  interface Window {
+    gitFs?: any;
+    sandpackFiles?: Record<string, any>;
+    changedFilePaths?: Set<string>;
+    synchronizeFiles?: () => Promise<boolean>;
+  }
+}
 
 // Define the tool call type
 export interface ToolCall {
@@ -732,6 +743,29 @@ ${currentFileContent}
             await delay(50); // Add delay
             await sandpack.runSandpack();
 
+            // Track the file as changed in window.changedFilePaths for gitFs synchronization
+            if (typeof window !== 'undefined') {
+              if (!window.changedFilePaths) {
+                window.changedFilePaths = new Set();
+              }
+              window.changedFilePaths.add(file_path);
+              
+              if (!window.sandpackFiles) {
+                window.sandpackFiles = {};
+              }
+              window.sandpackFiles[file_path] = content;
+              
+              // Trigger synchronization with gitFs if available
+              try {
+                if (window.gitFs && typeof window.synchronizeFiles === 'function') {
+                  await window.synchronizeFiles();
+                  console.log(`Synchronized ${file_path} to gitFs after AI edit`);
+                }
+              } catch (syncError) {
+                console.warn(`Failed to sync ${file_path} to gitFs:`, syncError);
+              }
+            }
+
             return {
               status: "success" as const,
               message: `File ${file_path} updated successfully`,
@@ -748,6 +782,28 @@ ${currentFileContent}
           await delay(50); // Add delay
           await sandpack.runSandpack();
 
+          // Track the file as changed in window.changedFilePaths for gitFs synchronization
+          if (typeof window !== 'undefined') {
+            if (!window.changedFilePaths) {
+              window.changedFilePaths = new Set();
+            }
+            window.changedFilePaths.add(file_path);
+            
+            if (!window.sandpackFiles) {
+              window.sandpackFiles = {};
+            }
+            window.sandpackFiles[file_path] = content;
+            
+            // Trigger synchronization with gitFs if available
+            try {
+              if (window.gitFs && typeof window.synchronizeFiles === 'function') {
+                await window.synchronizeFiles();
+                console.log(`Synchronized ${file_path} to gitFs after AI create`);
+              }
+            } catch (syncError) {
+              console.warn(`Failed to sync ${file_path} to gitFs:`, syncError);
+            }
+          }
           
           return {
             status: "success" as const,

@@ -5,6 +5,16 @@ import * as git from 'isomorphic-git';
 import http from 'isomorphic-git/http/web';
 import { useAuth } from '@/contexts/AuthContext';
 
+// Add the window interface declaration to make TypeScript happy
+declare global {
+  interface Window {
+    gitFs?: any;
+    sandpackFiles?: Record<string, any>;
+    changedFilePaths?: Set<string>;
+    synchronizeFiles?: () => Promise<boolean>;
+  }
+}
+
 interface UseGitOptions {
   repoPath?: string;
 }
@@ -131,6 +141,20 @@ export function useGit({ repoPath = '/repo' }: UseGitOptions = {}) {
       return false;
     }
   };
+
+  // Make synchronizeFiles available globally
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.synchronizeFiles = synchronizeFiles;
+    }
+    
+    return () => {
+      // Clean up when component unmounts
+      if (typeof window !== 'undefined') {
+        window.synchronizeFiles = undefined;
+      }
+    };
+  }, [repoPath]);
 
   const getStatusMatrix = async () => {
     try {
@@ -669,6 +693,7 @@ export function useGit({ repoPath = '/repo' }: UseGitOptions = {}) {
   return {
     isLoading,
     error,
+    synchronizeFiles,
     generateDiff,
     generateCommitMessage,
     stageChanges,
@@ -678,6 +703,5 @@ export function useGit({ repoPath = '/repo' }: UseGitOptions = {}) {
     createBranch,
     getStatusMatrix,
     hasChanges,
-    synchronizeFiles
   };
 } 

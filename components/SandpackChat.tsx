@@ -11,6 +11,16 @@ import http from 'isomorphic-git/http/web';
 import { useAuth } from "@/contexts/AuthContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 
+// Add window interface declaration for TypeScript
+declare global {
+  interface Window {
+    gitFs?: any;
+    sandpackFiles?: Record<string, any>;
+    changedFilePaths?: Set<string>;
+    synchronizeFiles?: () => Promise<boolean>;
+  }
+}
+
 // Default initial files when no repo is specified
 const initialFiles = {
   "/App.js": `import { useState } from 'react';
