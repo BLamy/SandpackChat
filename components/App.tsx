@@ -13,7 +13,7 @@ import {
   ResizableHandle,
 } from "@/components/ui/resizable";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Code2Icon, EyeIcon } from "lucide-react";
+import { EyeIcon, MessageCircleIcon } from "lucide-react";
 import type { Message } from "@/hooks/useSandpackAgent";
 
 export default function App() {
@@ -22,7 +22,7 @@ export default function App() {
     {
       id: "1",
       content: "Hello! I'm your coding assistant. How can I help you today?",
-      sender: "assistant",
+      type: "assistant_message",
       timestamp: new Date(),
     },
   ]);
@@ -58,8 +58,8 @@ export default function App() {
               <div className="border-b px-4">
                 <TabsList>
                   <TabsTrigger value="chat" className="flex items-center gap-2">
-                    <Code2Icon className="h-4 w-4" />
-                    <span>Code</span>
+                    <MessageCircleIcon className="h-4 w-4" />
+                    <span>Chat</span>
                   </TabsTrigger>
                   <TabsTrigger
                     value="preview"

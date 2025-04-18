@@ -21,6 +21,12 @@ import {
   AnthropicMessage,
   DEFAULT_SYSTEM_PROMPT,
   DEFAULT_TOOLS,
+  UserTextMessage,
+  AssistantTextMessage,
+  ToolCallMessage,
+  ToolResultMessage,
+  ToolCall,
+  ToolResult
 } from "@/hooks/useSandpackAgent";
 import {
   Dialog,
@@ -173,12 +179,71 @@ export function SandpackAgent({ messages, setMessages }: SandpackAgentProps) {
     return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   };
 
-  // Render tool call and result as a card
-  const renderToolCard = (message: Message) => {
-    if (!message.toolCall) return null;
+  // Clear messages function
+  const handleClearMessages = () => {
+    clearAgentMessages();
+    setMessages([
+      {
+        id: "1",
+        type: "assistant_message",
+        content: "Hello! I'm your coding assistant. How can I help you today?",
+        timestamp: new Date(),
+      },
+    ]);
+  };
 
-    const isCollapsed = collapsedTools[message.id] || false;
-    const { name, arguments: args } = message.toolCall;
+  // Group messages to pair tool calls with their results
+  const getGroupedMessages = useCallback(() => {
+    const groupedMessages: Array<Message | { type: 'tool_pair', call: ToolCallMessage, result: ToolResultMessage }> = [];
+    const toolResultsById: Record<string, ToolResultMessage> = {};
+    
+    // First, identify all tool results and index them by their toolCallId
+    messages.forEach(msg => {
+      if (msg.type === 'tool_result') {
+        toolResultsById[msg.toolCallId] = msg;
+      }
+    });
+    
+    // Now, process all messages and pair tool calls with their results
+    for (let i = 0; i < messages.length; i++) {
+      const message = messages[i];
+      
+      if (message.type === 'tool_call') {
+        const result = toolResultsById[message.toolCall.id];
+        
+        if (result) {
+          // Skip adding the result separately since we're pairing it
+          groupedMessages.push({ 
+            type: 'tool_pair', 
+            call: message,
+            result: result
+          });
+        } else {
+          // No result found, just add the tool call
+          groupedMessages.push(message);
+        }
+      } else if (message.type === 'tool_result') {
+        // Only add result if it wasn't already paired with a call
+        const alreadyPaired = groupedMessages.some(
+          m => m.type === 'tool_pair' && 'result' in m && m.result.id === message.id
+        );
+        
+        if (!alreadyPaired) {
+          groupedMessages.push(message);
+        }
+      } else {
+        // Regular message, add as is
+        groupedMessages.push(message);
+      }
+    }
+    
+    return groupedMessages;
+  }, [messages]);
+
+  // Render tool call and result as a single card
+  const renderToolCard = (toolCall: ToolCall, toolResult?: ToolResult) => {
+    const isCollapsed = collapsedTools[toolCall.id] || false;
+    const { name, arguments: args } = toolCall;
 
     // Format tool name for display
     const formatToolName = (name: string) => {
@@ -210,8 +275,8 @@ export function SandpackAgent({ messages, setMessages }: SandpackAgentProps) {
 
     // Get old content for diff view
     const getOldContent = () => {
-      if (name === "edit_file" && message.toolResult?.oldContent) {
-        return message.toolResult.oldContent;
+      if (name === "edit_file" && toolResult?.oldContent) {
+        return toolResult.oldContent;
       }
       return null;
     };
@@ -239,7 +304,7 @@ export function SandpackAgent({ messages, setMessages }: SandpackAgentProps) {
               variant="ghost"
               size="icon"
               className="h-7 w-7"
-              onClick={() => toggleToolCollapse(message.id)}
+              onClick={() => toggleToolCollapse(toolCall.id)}
             >
               {isCollapsed ? (
                 <ChevronDown className="h-3.5 w-3.5" />
@@ -312,17 +377,17 @@ export function SandpackAgent({ messages, setMessages }: SandpackAgentProps) {
               </div>
             )}
 
-            {message.toolResult && (
+            {toolResult && (
               <div className="p-3 border-t bg-muted/30">
                 <div className="text-xs font-medium mb-1">Result:</div>
                 <div className="text-sm">
-                  {message.toolResult.status === "success" ? (
+                  {toolResult.status === "success" ? (
                     <span className="text-green-600 dark:text-green-400">
-                      {message.toolResult.message}
+                      {toolResult.message}
                     </span>
                   ) : (
                     <span className="text-red-600 dark:text-red-400">
-                      {message.toolResult.error || "An error occurred"}
+                      {toolResult.error || "An error occurred"}
                     </span>
                   )}
                 </div>
@@ -333,6 +398,54 @@ export function SandpackAgent({ messages, setMessages }: SandpackAgentProps) {
       </Card>
     );
   };
+
+  // Render message content based on message type
+  const renderMessageContent = (message: Message | { type: 'tool_pair', call: ToolCallMessage, result: ToolResultMessage }) => {
+    if (message.type === 'user_message' || message.type === 'assistant_message') {
+      return (
+        <div className="text-sm whitespace-pre-wrap break-words overflow-hidden message-content">
+          {message.content}
+        </div>
+      );
+    } else if (message.type === 'tool_pair') {
+      return renderToolCard(message.call.toolCall, message.result.result);
+    } else if (message.type === 'tool_call') {
+      return renderToolCard(message.toolCall);
+    } else if (message.type === 'tool_result') {
+      // This should usually not be rendered separately, but as a fallback
+      return (
+        <div className="p-3 bg-muted/30 rounded-md mt-2">
+          <div className="text-xs font-medium mb-1">Tool Result:</div>
+          <div className="text-sm">
+            {message.result.status === "success" ? (
+              <span className="text-green-600 dark:text-green-400">
+                {message.result.message || JSON.stringify(message.result)}
+              </span>
+            ) : (
+              <span className="text-red-600 dark:text-red-400">
+                {message.result.error || "An error occurred"}
+              </span>
+            )}
+          </div>
+        </div>
+      );
+    }
+    
+    return null;
+  };
+
+  // Determine if a message is from the user
+  const isUserMessage = (message: Message | { type: 'tool_pair', call: ToolCallMessage, result: ToolResultMessage }) => {
+    return message.type === 'user_message';
+  };
+
+  // Determine if a message is from the assistant
+  const isAssistantMessage = (message: Message | { type: 'tool_pair', call: ToolCallMessage, result: ToolResultMessage }) => {
+    return message.type === 'assistant_message' || message.type === 'tool_call' || 
+      message.type === 'tool_result' || message.type === 'tool_pair';
+  };
+
+  const groupedMessages = getGroupedMessages();
 
   return (
     <>
@@ -352,18 +465,7 @@ export function SandpackAgent({ messages, setMessages }: SandpackAgentProps) {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => {
-                clearAgentMessages();
-                setMessages([
-                  {
-                    id: "1",
-                    content:
-                      "Hello! I'm your coding assistant. How can I help you today?",
-                    sender: "assistant",
-                    timestamp: new Date(),
-                  },
-                ]);
-              }}
+              onClick={handleClearMessages}
             >
               Clear
             </Button>
@@ -376,14 +478,14 @@ export function SandpackAgent({ messages, setMessages }: SandpackAgentProps) {
           ref={scrollAreaRef}
         >
           <div className="flex flex-col gap-4 max-w-full">
-            {messages.map((message) => (
+            {groupedMessages.map((message, index) => (
               <div
-                key={message.id}
+                key={message.type === 'tool_pair' ? `pair-${message.call.id}-${message.result.id}` : message.id}
                 className={`flex gap-3 ${
-                  message.sender === "user" ? "justify-end" : "justify-start"
+                  isUserMessage(message) ? "justify-end" : "justify-start"
                 }`}
               >
-                {message.sender === "assistant" && (
+                {isAssistantMessage(message) && (
                   <Avatar className="h-8 w-8 flex-shrink-0">
                     <AvatarFallback>
                       <BotIcon className="h-4 w-4" />
@@ -393,23 +495,19 @@ export function SandpackAgent({ messages, setMessages }: SandpackAgentProps) {
 
                 <div
                   className={`max-w-[80%] rounded-lg p-3 overflow-hidden ${
-                    message.sender === "user"
+                    isUserMessage(message)
                       ? "bg-primary text-primary-foreground"
                       : "bg-muted"
                   }`}
                 >
-                  <div className="text-sm whitespace-pre-wrap break-words overflow-hidden message-content">
-                    {message.content}
-                  </div>
-
-                  {message.toolCall && renderToolCard(message)}
+                  {renderMessageContent(message)}
 
                   <div className="text-xs mt-1 opacity-70 text-right">
-                    {formatTime(message.timestamp)}
+                    {formatTime(message.type === 'tool_pair' ? message.call.timestamp : message.timestamp)}
                   </div>
                 </div>
 
-                {message.sender === "user" && (
+                {isUserMessage(message) && (
                   <Avatar className="h-8 w-8 flex-shrink-0">
                     <AvatarFallback>
                       <UserIcon className="h-4 w-4" />

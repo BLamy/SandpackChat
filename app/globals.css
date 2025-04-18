@@ -154,17 +154,3 @@ iframe {
   visibility: visible !important;
   opacity: 1 !important;
 }
-
-/* Fix for tabs content */
-.h-full.flex.flex-col > [data-state="active"] {
-  flex: 1 !important;
-  display: flex !important;
-  height: 100% !important;
-}
-
-/* Ensure TabsContent takes full height */
-.h-full.flex.flex-col > div.flex-1 {
-  flex: 1 !important;
-  height: 100% !important;
-  overflow: hidden !important;
-}

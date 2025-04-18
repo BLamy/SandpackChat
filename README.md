@@ -2,6 +2,11 @@
 
 This project demonstrates a React-based AI coding assistant that integrates with Sandpack and Claude AI to provide intelligent code assistance directly in the browser.
 
+# [Demo](https://blamy.github.io/SandpackChat/)
+
+![screenshot](./screenshot.png)
+
+
 ## Features
 
 - Chat interface with Claude AI integrated
