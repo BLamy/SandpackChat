@@ -4,7 +4,6 @@ import {
   SendIcon,
   BotIcon,
   UserIcon,
-  KeyIcon,
   Wrench,
   ChevronDown,
   ChevronUp,
@@ -13,7 +12,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Label } from "@/components/ui/label";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import {
   useSandpackAgent,
@@ -28,32 +26,23 @@ import {
   ToolCall,
   ToolResult
 } from "@/hooks/useSandpackAgent";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
 
 export interface SandpackAgentProps {
   messages: Message[];
   setMessages: React.Dispatch<React.SetStateAction<Message[]>>;
+  apiKey: string;
+  onRequestApiKey: () => void;
 }
 
-export function SandpackAgent({ messages, setMessages }: SandpackAgentProps) {
+export function SandpackAgent({ messages, setMessages, apiKey, onRequestApiKey }: SandpackAgentProps) {
 
   const [input, setInput] = useState("");
-  const [apiKey, setApiKey] = useState<string>("");
-  const [isApiKeyDialogOpen, setIsApiKeyDialogOpen] = useState(false);
   const [collapsedTools, setCollapsedTools] = useState<Record<string, boolean>>(
     {}
   );
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const apiKeyInputRef = useRef<HTMLInputElement>(null);
 
   // Define the callLLM function that will be passed to useSandpackAgent
   const callLLM = useCallback(
@@ -63,6 +52,7 @@ export function SandpackAgent({ messages, setMessages }: SandpackAgentProps) {
       tools: any[]
     ) => {
       if (!apiKey) {
+        onRequestApiKey();
         throw new Error("API key is required");
       }
 
@@ -92,7 +82,7 @@ export function SandpackAgent({ messages, setMessages }: SandpackAgentProps) {
 
       return await response.json();
     },
-    [apiKey]
+    [apiKey, onRequestApiKey]
   );
 
   // Get the agent hook with our custom callLLM function
@@ -106,16 +96,6 @@ export function SandpackAgent({ messages, setMessages }: SandpackAgentProps) {
     systemPrompt: DEFAULT_SYSTEM_PROMPT,
     tools: DEFAULT_TOOLS,
   });
-
-  // Check for API key in localStorage on mount
-  useEffect(() => {
-    const storedApiKey = localStorage.getItem("anthropic-api-key");
-    if (storedApiKey) {
-      setApiKey(storedApiKey);
-    } else {
-      setIsApiKeyDialogOpen(true);
-    }
-  }, []);
 
   // Sync agent messages with the Chat component's messages
   useEffect(() => {
@@ -136,26 +116,10 @@ export function SandpackAgent({ messages, setMessages }: SandpackAgentProps) {
     }
   }, []);
 
-  // Focus API key input when dialog opens
-  useEffect(() => {
-    if (isApiKeyDialogOpen && apiKeyInputRef.current) {
-      setTimeout(() => {
-        apiKeyInputRef.current?.focus();
-      }, 100);
-    }
-  }, [isApiKeyDialogOpen]);
-
-  const saveApiKey = () => {
-    if (apiKey) {
-      localStorage.setItem("anthropic-api-key", apiKey);
-      setIsApiKeyDialogOpen(false);
-    }
-  };
-
   const handleSendMessage = async () => {
     if (!input.trim()) return;
     if (!apiKey) {
-      setIsApiKeyDialogOpen(true);
+      onRequestApiKey();
       return;
     }
 
@@ -456,15 +420,6 @@ export function SandpackAgent({ messages, setMessages }: SandpackAgentProps) {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setIsApiKeyDialogOpen(true)}
-              className="flex items-center gap-1"
-            >
-              <KeyIcon className="h-3 w-3" />
-              API Key
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
               onClick={handleClearMessages}
             >
               Clear
@@ -565,36 +520,6 @@ export function SandpackAgent({ messages, setMessages }: SandpackAgentProps) {
           </form>
         </div>
       </div>
-
-      <Dialog open={isApiKeyDialogOpen} onOpenChange={setIsApiKeyDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Enter Anthropic API Key</DialogTitle>
-            <DialogDescription>
-              Please enter your Anthropic API key to enable the chat assistant.
-              Your key will be stored in your browser's local storage.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="api-key">API Key</Label>
-              <Input
-                id="api-key"
-                ref={apiKeyInputRef}
-                type="password"
-                placeholder="sk-ant-..."
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button onClick={saveApiKey} disabled={!apiKey}>
-              Save
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </>
   );
 }
