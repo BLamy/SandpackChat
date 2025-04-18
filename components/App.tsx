@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import {
   SandpackCodeEditor,
   SandpackFileExplorer,
@@ -15,19 +15,17 @@ import {
   ResizableHandle,
 } from "@/components/ui/resizable";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  EyeIcon, 
-  MessageCircleIcon, 
-  GitBranchIcon, 
+import {
+  EyeIcon,
+  MessageCircleIcon,
+  GitBranchIcon,
   GitCommitIcon,
-  Loader2Icon,
-  KeyIcon,
-  LogOutIcon
+  Loader2Icon, LogOutIcon
 } from "lucide-react";
 import type { Message } from "@/hooks/useSandpackAgent";
 import { useGit } from "@/hooks/useGit";
 import { useAuth } from "@/contexts/AuthContext";
-import { 
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -36,83 +34,13 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "../components/ui/alert-dialog";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+} from "@/components/ui/alert-dialog";
 
 interface AppProps {
   repo: string | null;
   setRepo: (value: string | null) => Promise<URLSearchParams>;
 }
 
-// API Key Dialog Component
-interface ApiKeyDialogProps {
-  isOpen: boolean;
-  onOpenChange: (open: boolean) => void;
-  apiKey: string;
-  setApiKey: (key: string) => void;
-}
-
-export function ApiKeyDialog({ isOpen, onOpenChange, apiKey, setApiKey }: ApiKeyDialogProps) {
-  const apiKeyInputRef = useRef<HTMLInputElement>(null);
-  
-  // Focus API key input when dialog opens
-  useEffect(() => {
-    if (isOpen && apiKeyInputRef.current) {
-      setTimeout(() => {
-        apiKeyInputRef.current?.focus();
-      }, 100);
-    }
-  }, [isOpen]);
-  
-  const saveApiKey = () => {
-    if (apiKey) {
-      localStorage.setItem("anthropic-api-key", apiKey);
-      onOpenChange(false);
-    }
-  };
-  
-  return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Enter Anthropic API Key</DialogTitle>
-          <DialogDescription>
-            Please enter your Anthropic API key to enable AI features.
-            Your key will be stored in your browser's local storage.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="grid gap-2">
-            <Label htmlFor="api-key">API Key</Label>
-            <Input
-              id="api-key"
-              ref={apiKeyInputRef}
-              type="password"
-              placeholder="sk-ant-..."
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-            />
-          </div>
-        </div>
-        <DialogFooter>
-          <Button onClick={saveApiKey} disabled={!apiKey}>
-            Save
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
 
 // Add TypeScript declarations for window properties
 declare global {
@@ -716,8 +644,11 @@ export default function App({ repo, setRepo }: AppProps) {
                   value="preview"
                   className="h-full p-0 m-0 data-[state=active]:flex"
                 >
-                  <SandpackTests  verbose onComplete={(...args) => {
-                    console.log("Tests completed:", args);
+                  <SandpackTests  verbose onComplete={(results) => {
+                    console.log("Tests completed:", results);
+                    if (agent && agent.updateTestResults) {
+                      agent.updateTestResults(results);
+                    }
                   }} />
                 </TabsContent>
               </div>

@@ -44,6 +44,30 @@ export interface ToolResult {
   [key: string]: any;
 }
 
+// Define test result interface
+export interface TestResult {
+  path: string;
+  name: string;
+  status: "pass" | "fail";
+  errors: Array<{
+    name: string;
+    message: string;
+    stack: string;
+    mappedErrors?: any[];
+  }>;
+  duration: number;
+  blocks: string[];
+}
+
+// Define test suite results interface
+export interface TestResults {
+  [filePath: string]: {
+    describes: Record<string, any>;
+    tests: Record<string, any>;
+    name: string;
+  };
+}
+
 // Base message interface
 export interface BaseMessage {
   id: string;
@@ -335,6 +359,28 @@ export const DEFAULT_TOOLS = [
       required: [],
     },
   },
+  {
+    name: "get_test_results",
+    description: "Get the results of tests that have been run in the sandbox",
+    input_schema: {
+      type: "object",
+      properties: {
+        file_path: {
+          type: "string",
+          description: "Optional file path to filter test results for a specific file",
+        },
+        status: {
+          type: "string",
+          description: "Optional filter by test status ('pass' or 'fail')",
+        },
+        explanation: {
+          type: "string",
+          description: "One sentence explanation as to why this tool is being used",
+        },
+      },
+      required: [],
+    },
+  },
 ];
 
 // Default system prompt
@@ -404,6 +450,7 @@ export function useSandpackAgent({
   const { files, activeFile } = sandpack;
   const [loading, setLoading] = useState(isLoading);
   const [messages, setMessages] = useState<Message[]>([]);
+  const [testResults, setTestResults] = useState<TestResults>({});
   
   // Refs to track conversation state
   const conversationInProgress = useRef(false);
@@ -1061,6 +1108,91 @@ ${currentFileContent}
               { file: "README.md", additions: 1, deletions: 0, timestamp: new Date().toISOString() },
             ],
           };
+        case "get_test_results": {
+          const { file_path, status } = input;
+          
+          // Filter results based on provided parameters
+          let filteredResults = structuredClone(testResults);
+          
+          // Filter by file path if specified
+          if (file_path) {
+            filteredResults = Object.keys(filteredResults)
+              .filter(key => key === file_path || key.includes(file_path))
+              .reduce((obj, key) => {
+                obj[key] = filteredResults[key];
+                return obj;
+              }, {} as TestResults);
+          }
+          
+          // Extract test results with specific status (pass/fail) if specified
+          if (status) {
+            Object.keys(filteredResults).forEach(filePath => {
+              const fileResult = filteredResults[filePath];
+              
+              // Filter describes
+              const filteredDescribes: Record<string, any> = {};
+              Object.keys(fileResult.describes).forEach(describeKey => {
+                const describe = fileResult.describes[describeKey];
+                
+                // Filter nested describes first
+                const filteredNestedDescribes: Record<string, any> = {};
+                Object.keys(describe.describes || {}).forEach(nestedKey => {
+                  const nestedDescribe = describe.describes[nestedKey];
+                  
+                  // Filter tests in nested describe
+                  const filteredTests: Record<string, any> = {};
+                  Object.keys(nestedDescribe.tests || {}).forEach(testKey => {
+                    const test = nestedDescribe.tests[testKey];
+                    if (test.status === status) {
+                      filteredTests[testKey] = test;
+                    }
+                  });
+                  
+                  // Only include if it has matching tests
+                  if (Object.keys(filteredTests).length > 0) {
+                    filteredNestedDescribes[nestedKey] = {
+                      ...nestedDescribe,
+                      tests: filteredTests,
+                    };
+                  }
+                });
+                
+                // Filter tests in top-level describe
+                const filteredTopLevelTests: Record<string, any> = {};
+                Object.keys(describe.tests || {}).forEach(testKey => {
+                  const test = describe.tests[testKey];
+                  if (test.status === status) {
+                    filteredTopLevelTests[testKey] = test;
+                  }
+                });
+                
+                // Only include if it has matching tests or nested describes
+                if (
+                  Object.keys(filteredTopLevelTests).length > 0 || 
+                  Object.keys(filteredNestedDescribes).length > 0
+                ) {
+                  filteredDescribes[describeKey] = {
+                    ...describe,
+                    tests: filteredTopLevelTests,
+                    describes: filteredNestedDescribes,
+                  };
+                }
+              });
+              
+              // Update the file's filtered describes
+              filteredResults[filePath] = {
+                ...fileResult,
+                describes: filteredDescribes,
+              };
+            });
+          }
+          
+          return {
+            status: "success" as const,
+            message: `Retrieved test results${file_path ? ` for ${file_path}` : ""}${status ? ` with status '${status}'` : ""}`,
+            results: filteredResults,
+          };
+        }
         default:
           throw new Error(`Unknown tool: ${name}`);
       }
@@ -1122,6 +1254,36 @@ ${currentFileContent}
     }
   }, []);
 
+  // Method to update test results from SandpackTests onComplete
+  const updateTestResults = (results: TestResults) => {
+    setTestResults(results);
+    
+    // If there are failing tests, you might want to notify the agent
+    const hasFailingTests = Object.values(results).some(fileResult => {
+      return Object.values(fileResult.describes).some(describe => {
+        // Check top-level tests
+        const hasFailingTopLevelTests = Object.values(describe.tests || {}).some(
+          test => (test as any).status === 'fail'
+        );
+        
+        // Check nested describes tests
+        const hasFailingNestedTests = Object.values(describe.describes || {}).some(nestedDescribe => {
+          return Object.values((nestedDescribe as any).tests || {}).some(
+            test => (test as any).status === 'fail'
+          );
+        });
+        
+        return hasFailingTopLevelTests || hasFailingNestedTests;
+      });
+    });
+    
+    if (hasFailingTests && conversationInProgress.current) {
+      // You could send an automatic message about failing tests
+      const failMessage = "Test results have been updated. There are failing tests.";
+      messageQueue.current.push(failMessage);
+    }
+  };
+
   return {
     messages,
     setMessages,
@@ -1129,5 +1291,7 @@ ${currentFileContent}
     clearMessages,
     isLoading: loading,
     messagesEndRef,
+    testResults,
+    updateTestResults,
   };
 }
