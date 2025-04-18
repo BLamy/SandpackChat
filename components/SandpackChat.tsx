@@ -9,8 +9,6 @@ import * as LightningFS from '@isomorphic-git/lightning-fs';
 import * as git from 'isomorphic-git';
 import http from 'isomorphic-git/http/web';
 import { useAuth } from "@/contexts/AuthContext";
-import { saveSecretToStorage, useSecureLocalStorage } from "@/hooks/useSecureLocalStorage";
-import { AuthProvider } from "@/contexts/AuthContext";
 
 // Default initial files when no repo is specified
 const initialFiles = {
