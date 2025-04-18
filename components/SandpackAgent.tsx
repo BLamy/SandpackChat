@@ -14,7 +14,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/components/ui/use-toast";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import {
   useSandpackAgent,
@@ -38,7 +37,6 @@ export interface SandpackAgentProps {
 }
 
 export function SandpackAgent({ messages, setMessages }: SandpackAgentProps) {
-  const { toast } = useToast();
 
   const [input, setInput] = useState("");
   const [apiKey, setApiKey] = useState<string>("");
@@ -145,10 +143,6 @@ export function SandpackAgent({ messages, setMessages }: SandpackAgentProps) {
     if (apiKey) {
       localStorage.setItem("anthropic-api-key", apiKey);
       setIsApiKeyDialogOpen(false);
-      toast({
-        title: "API Key Saved",
-        description: "Your Anthropic API key has been saved.",
-      });
     }
   };
 

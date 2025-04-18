@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useSandpack } from "@codesandbox/sandpack-react";
-import { useToast } from "@/components/ui/use-toast";
 
 export interface Message {
   id: string;
@@ -149,7 +148,6 @@ export function useSandpackAgent({
 }: UseSandpackAgentProps) {
   const { sandpack } = useSandpack();
   const { files, activeFile } = sandpack;
-  const { toast } = useToast();
   const [loading, setLoading] = useState(isLoading);
   const [messages, setMessages] = useState<Message[]>([]);
 
@@ -450,13 +448,6 @@ ${currentFileContent}
 
       setMessages((prev) => [...prev, errorMessage]);
 
-      toast({
-        title: "Error",
-        description:
-          "Failed to get response from LLM. Please check your settings.",
-        variant: "destructive",
-      });
-
       throw error;
     } finally {
       setLoading(false);
@@ -476,10 +467,6 @@ ${currentFileContent}
             sandpack.updateFile(file_path, content, true);
             await delay(50); // Add delay
             await sandpack.runSandpack();
-            toast({
-              title: "File Updated",
-              description: `Successfully updated ${file_path}`,
-            });
 
             return {
               status: "success",
@@ -496,10 +483,8 @@ ${currentFileContent}
           sandpack.addFile(file_path, content, true);
           await delay(50); // Add delay
           await sandpack.runSandpack();
-          toast({
-            title: "File Created",
-            description: `Successfully created ${file_path}`,
-          });
+
+          
           return {
             status: "success",
             message: `File ${file_path} created successfully`,
@@ -516,10 +501,6 @@ ${currentFileContent}
             sandpack.deleteFile(file_path, true);
             await delay(50); // Add delay
             await sandpack.runSandpack();
-            toast({
-              title: "File Deleted",
-              description: `Successfully deleted ${file_path}`,
-            });
 
             return {
               status: "success",
@@ -535,11 +516,7 @@ ${currentFileContent}
       }
     } catch (error) {
       console.error(`Error executing tool ${name}:`, error);
-      toast({
-        title: "Tool Execution Error",
-        description: error instanceof Error ? error.message : "Unknown error",
-        variant: "destructive",
-      });
+
       throw error;
     }
   };
